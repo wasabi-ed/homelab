@@ -1,0 +1,38 @@
+services:
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    network_mode: host
+    environment:
+      - PUID=1000
+      - PGID=982
+      - TZ=America/New_York
+      - VERSION=docker
+    volumes:
+      - /srv/media:/media
+      - ./config:/config
+    restart: unless-stopped
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./portainer_data:/data
+    restart: unless-stopped
+
+  heimdall:
+    image: lscr.io/linuxserver/heimdall:latest
+    container_name: heimdall
+    environment:
+      - PUID=1000
+      - PGID=982
+      - TZ=America/New_York
+    volumes:
+      - ./heimdall_config:/config
+    ports:
+      - "8080:80"
+      - "8443:443"
+    restart: unless-stopped
