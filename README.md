@@ -1,4 +1,4 @@
-# Home Lab
+# Home Lab Server
 
 What started as a Plex media server has grown into a hands-on exercise 
 in virtualization, containerization, and system monitoring.
