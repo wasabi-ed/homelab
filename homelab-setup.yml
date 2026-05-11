@@ -1,0 +1,102 @@
+---
+- name: Setup homelab server
+  hosts: target
+  become: true
+
+  tasks:
+    - name: Update apt packages
+      apt:
+        update_cache: yes
+
+    - name: Install Git
+      apt:
+        name: git
+        state: present
+
+    - name: Install Docker dependencies
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+
+    - name: Create Docker keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download Docker GPG key
+      shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      args:
+        creates: /etc/apt/keyrings/docker.gpg
+
+    - name: Add Docker repository
+      shell: |
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu noble stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+      args:
+        creates: /etc/apt/sources.list.d/docker.list
+
+    - name: Update apt cache after adding Docker repo
+      apt:
+        update_cache: yes
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Create disable IPv6 Systemd service
+      copy:
+        dest: /etc/systemd/system/disable-ipv6.service
+        content: |
+          [Unit]
+          Description=Disable IPv6
+          Before=network.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=/sbin/sysctl -w net.ipv6.conf.all.disable_ipv6=1
+          ExecStart=/sbin/sysctl -w net.ipv6.conf.default.disable_ipv6=1
+          ExecStart=/sbin/sysctl -w net.ipv6.conf.enp0s3.disable_ipv6=1
+          RemainAfterExit=yes
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start disable-ipv6 service
+      systemd:
+        name: disable-ipv6
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Clone homelab repo
+      git:
+        repo: https://github.com/wasabi-ed/homelab.git
+        dest: /home/{{ ansible_user }}/homelab
+        clone: yes
+        update: yes
+
+    - name: Start plex stack
+      community.docker.docker_compose_v2:
+        project_src: /home/{{ ansible_user }}/homelab/plex
+        state: present
+
+    - name: Start Monitoring stack
+      community.docker.docker_compose_v2:
+        project_src: /home/{{ ansible_user }}/homelab/monitoring
+        state: present
