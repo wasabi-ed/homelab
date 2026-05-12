@@ -7,7 +7,42 @@
     - name: Update apt packages
       apt:
         update_cache: yes
+        
+    - name: Create disable IPv6 Systemd service
+      copy:
+        dest: /etc/systemd/system/disable-ipv6.service
+        content: |
+          [Unit]
+          Description=Disable IPv6
+          Before=network.target
 
+          [Service]
+          Type=oneshot
+          ExecStart=/sbin/sysctl -w net.ipv6.conf.all.disable_ipv6=1
+          ExecStart=/sbin/sysctl -w net.ipv6.conf.default.disable_ipv6=1
+          ExecStart=/sbin/sysctl -w net.ipv6.conf.enp0s3.disable_ipv6=1
+          RemainAfterExit=yes
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start disable-ipv6 service
+      systemd:
+        name: disable-ipv6
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Disable IPv6 immediately
+      sysctl:
+        name: "{{ item }}"
+        value: '1'
+        state: present
+      loop:
+        - net.ipv6.conf.all.disable_ipv6
+        - net.ipv6.conf.default.disable_ipv6
+        - net.ipv6.conf.enp0s3.disable_ipv6
+        
     - name: Install Git
       apt:
         name: git
@@ -58,31 +93,6 @@
         name: "{{ ansible_user }}"
         groups: docker
         append: yes
-
-    - name: Create disable IPv6 Systemd service
-      copy:
-        dest: /etc/systemd/system/disable-ipv6.service
-        content: |
-          [Unit]
-          Description=Disable IPv6
-          Before=network.target
-
-          [Service]
-          Type=oneshot
-          ExecStart=/sbin/sysctl -w net.ipv6.conf.all.disable_ipv6=1
-          ExecStart=/sbin/sysctl -w net.ipv6.conf.default.disable_ipv6=1
-          ExecStart=/sbin/sysctl -w net.ipv6.conf.enp0s3.disable_ipv6=1
-          RemainAfterExit=yes
-
-          [Install]
-          WantedBy=multi-user.target
-
-    - name: Enable and start disable-ipv6 service
-      systemd:
-        name: disable-ipv6
-        enabled: yes
-        state: started
-        daemon_reload: yes
 
     - name: Clone homelab repo
       git:
