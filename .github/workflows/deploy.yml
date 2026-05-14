@@ -7,24 +7,19 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd ~/docker/homelab
-            git pull origin main
-            cd plex
-            docker compose pull
-            docker compose up -d
-            cd ../monitoring
-            docker compose pull
-            docker compose up -d
+      - name: Deploy stacks
+        run: |
+          cd ~/docker/homelab
+          git pull origin main
+          cd plex
+          docker compose pull
+          docker compose up -d
+          cd ../monitoring
+          docker compose pull
+          docker compose up -d
