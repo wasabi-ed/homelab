@@ -18,8 +18,6 @@ jobs:
           cd ~/docker/homelab
           git pull origin main
           cd plex
-          docker compose pull
           docker compose up -d
           cd ../monitoring
-          docker compose pull
           docker compose up -d
